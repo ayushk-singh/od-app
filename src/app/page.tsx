@@ -1,8 +1,13 @@
+'use client'
 import { NavBar } from "@/components/NavBar/NavBar";
-export default function HomePage() {
+import { withAuth } from "@/components/WithAuth/WithAuth";
+
+function HomePage() {
   return (
     <>
-      <NavBar/>
+      <NavBar />
     </>
   );
 }
+
+export default withAuth(HomePage); // Wrapping the component with the HOC

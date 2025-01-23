@@ -1,9 +1,11 @@
 'use client';
-
+import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { IconArrowRight, IconEdit, IconFileSearch, IconPhoto } from '@tabler/icons-react';
-import { AppShell, Avatar, Box, Burger, Button, Group, NavLink } from '@mantine/core';
+import { AppShell, Box, Burger, Button, Group, NavLink } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
+import { account } from '@/config/appwrite';
+import { log } from 'console';
 
 const data = [
   { icon: IconEdit, label: 'Create Application' },
@@ -13,6 +15,18 @@ const data = [
 export function NavBar() {
   const [opened, { toggle }] = useDisclosure();
   const [active, setActive] = useState(0);
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    try {
+      await account.deleteSession('current');
+      alert('LogOut successful!');
+      router.push('/login');
+    } catch (err: any) {
+      console.log("Can't Log Out error: ", err);
+      
+    }
+  }
 
   const items = data.map((item, index) => (
     <NavLink
@@ -38,14 +52,16 @@ export function NavBar() {
     >
       <AppShell.Header>
         <Group h="100%" px="md">
-          <Burger opened={opened} onClick={toggle} hiddenFrom="sm" size="sm" />X
+          <Burger opened={opened} className='bg-amber-400' onClick={toggle} hiddenFrom="sm" size="sm" />X
         </Group>
       </AppShell.Header>
       <AppShell.Navbar p="md">
         <Box w={220}>{items}</Box>
-        <Button w={220} rightSection={<IconArrowRight size={14} />}>Log Out</Button>
+        <Button w={220} onClick={handleLogout} rightSection={<IconArrowRight size={14} />}>Log Out</Button>
       </AppShell.Navbar>
-      <AppShell.Main>Main</AppShell.Main>
+      <AppShell.Main>
+        <div>Main</div>
+      </AppShell.Main>
     </AppShell>
   );
 }

@@ -1,17 +1,8 @@
-'use client';
-import { useRouter } from 'next/navigation'; // Import useRouter from next/navigation
-import { useState } from 'react';
-import {
-  Anchor,
-  Button,
-  Checkbox,
-  Paper,
-  PasswordInput,
-  Text,
-  TextInput,
-  Title,
-} from '@mantine/core';
+"use client"
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { account } from '@/config/appwrite';
+import { Button, Paper, PasswordInput, TextInput, Title, Text } from '@mantine/core';
 import classes from '@/components/AuthUI/AuthUI.module.css';
 
 export function Authentication() {
@@ -19,18 +10,30 @@ export function Authentication() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
-  const router = useRouter(); // Get the useRouter hook for navigation
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        // Check if user is already logged in
+        await account.get();
+        router.push('/'); // Redirect to the dashboard if logged in
+      } catch (err) {
+        console.log('User not logged in:', err);
+      }
+    };
+
+    checkSession();
+  }, [router]);
 
   const handleLogin = async () => {
     setLoading(true);
     setError(null);
 
     try {
-      // Attempt to create an email session with Appwrite
       await account.createEmailPasswordSession(email, password);
       alert('Login successful!');
-      router.push('/'); // Navigate to home page after successful login
+      router.push('/'); // Navigate to the dashboard
     } catch (err: any) {
       setError(err?.message || 'An error occurred while logging in');
     } finally {
@@ -68,13 +71,7 @@ export function Authentication() {
           </Text>
         )}
 
-        <Button
-          fullWidth
-          mt="xl"
-          size="md"
-          loading={loading}
-          onClick={handleLogin}
-        >
+        <Button fullWidth mt="xl" size="md" loading={loading} onClick={handleLogin}>
           Login
         </Button>
       </Paper>
