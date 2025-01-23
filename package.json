@@ -22,10 +22,12 @@
   },
   "dependencies": {
     "@mantine/core": "7.16.1",
+    "@mantine/dates": "^7.16.1",
     "@mantine/hooks": "7.16.1",
     "@next/bundle-analyzer": "^15.1.5",
     "@tabler/icons-react": "^3.29.0",
     "appwrite": "^16.1.0",
+    "dayjs": "^1.11.13",
     "dotenv": "^16.4.7",
     "next": "15.1.5",
     "react": "19.0.0",

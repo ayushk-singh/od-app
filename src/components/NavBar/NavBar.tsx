@@ -1,11 +1,16 @@
 'use client';
-import { useRouter } from 'next/navigation';
+
 import { useState } from 'react';
+import NextImage from 'next/image';
+import { useRouter } from 'next/navigation';
 import { IconArrowRight, IconEdit, IconFileSearch, IconPhoto } from '@tabler/icons-react';
-import { AppShell, Box, Burger, Button, Group, NavLink } from '@mantine/core';
+import { AppShell, Box, Burger, Button, Group, Image, NavLink } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { account } from '@/config/appwrite';
-import { log } from 'console';
+import hicasLogo from '../../../public/hicas_logo.jpg';
+import OdForm from '../OdForm/OdForm';
+import TrackApplication from '../TrackApplication/TrackApplication';
+import classes from '@/components/NavBar/NavBar.module.css';
 
 const data = [
   { icon: IconEdit, label: 'Create Application' },
@@ -24,13 +29,11 @@ export function NavBar() {
       router.push('/login');
     } catch (err: any) {
       console.log("Can't Log Out error: ", err);
-      
     }
-  }
+  };
 
   const items = data.map((item, index) => (
     <NavLink
-      href="#required-for-focus"
       key={item.label}
       active={index === active}
       label={item.label}
@@ -52,16 +55,32 @@ export function NavBar() {
     >
       <AppShell.Header>
         <Group h="100%" px="md">
-          <Burger opened={opened} className='bg-amber-400' onClick={toggle} hiddenFrom="sm" size="sm" />X
+          <Burger
+            opened={opened}
+            className="bg-amber-400"
+            onClick={toggle}
+            hiddenFrom="sm"
+            size="sm"
+          />
+          <Image
+            className={classes.logo}
+            h="auto"
+            w="100%"
+            fit="contain"
+            component={NextImage}
+            src={hicasLogo}
+            alt="HICAS logo"
+          />
+          <h2>Hindusthan College of Arts & Science</h2>
         </Group>
       </AppShell.Header>
-      <AppShell.Navbar p="md">
+      <AppShell.Navbar withBorder={true} p="md">
         <Box w={220}>{items}</Box>
-        <Button w={220} onClick={handleLogout} rightSection={<IconArrowRight size={14} />}>Log Out</Button>
+        <Button w={220} mt="xl" onClick={handleLogout} rightSection={<IconArrowRight size={14} />}>
+          Log Out
+        </Button>
       </AppShell.Navbar>
-      <AppShell.Main>
-        <div>Main</div>
-      </AppShell.Main>
+      <AppShell.Main>{active === 0 ? <OdForm /> : <TrackApplication />}</AppShell.Main>
     </AppShell>
   );
 }
