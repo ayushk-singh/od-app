@@ -23,6 +23,7 @@
   "dependencies": {
     "@mantine/core": "7.16.1",
     "@mantine/dates": "^7.16.1",
+    "@mantine/form": "^7.16.1",
     "@mantine/hooks": "7.16.1",
     "@next/bundle-analyzer": "^15.1.5",
     "@tabler/icons-react": "^3.29.0",

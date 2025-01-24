@@ -1,37 +1,70 @@
-import React from 'react';
-import { Button, TextInput, Timeline, Text } from '@mantine/core';
-import { IconGitBranch, IconGitPullRequest, IconGitCommit, IconMessageDots } from '@tabler/icons-react';
-
+import React, { useState } from 'react';
+import { Button, TextInput, Text, Loader, Group } from '@mantine/core';
+import { databases } from '@/config/appwrite';
+import { Query } from 'appwrite';
+import env from '@/env';
 
 function TrackApplication() {
+  const [registerNo, setRegisterNo] = useState('');
+  const [statusData, setStatusData] = useState<any[]>([]); // Array of status data for multiple applications
+  const [loading, setLoading] = useState(false);
+
+  const handleTrackStatus = async () => {
+    setLoading(true);
+    try {
+      // Define your database details
+      const databaseId = env.appwriteDB.databaseId; 
+      const collectionId = env.appwriteDB.collectionIdOD; 
+
+      // Fetch the documents by Register No.
+      const response = await databases.listDocuments(databaseId, collectionId, [
+        Query.equal('registerNo', registerNo), // Now querying with 'registerNo'
+      ]);
+
+      // Check if any documents were found
+      if (response.documents.length > 0) {
+        setStatusData(response.documents); // Set all matching documents to the state
+      } else {
+        alert('No applications found for the given Register No.');
+        setStatusData([]); // Reset if no applications are found
+      }
+    } catch (error: any) {
+      console.error('Error fetching application status:', error.message);
+      alert('Error fetching the application status');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return <Loader />;
+  }
+
   return (
     <>
-      <TextInput label="Track OD Application" placeholder="Enter Your OD Application Number" />
-      <Button mt="lg" variant="filled">Track Status</Button>
-      
+      <TextInput
+        label="Track OD Application"
+        placeholder="Enter Your Register No."
+        value={registerNo}
+        onChange={(e) => setRegisterNo(e.target.value)}
+      />
+      <Button mt="lg" variant="filled" onClick={handleTrackStatus}>Track Status</Button>
 
-      <Timeline mt="xl" active={1} bulletSize={24} lineWidth={2}>
-      <Timeline.Item bullet={<IconGitBranch size={12} />} title="New branch">
-        <Text c="dimmed" size="sm">You&apos;ve created new branch <Text variant="link" component="span" inherit>fix-notifications</Text> from master</Text>
-        <Text size="xs" mt={4}>2 hours ago</Text>
-      </Timeline.Item>
-
-      <Timeline.Item bullet={<IconGitCommit size={12} />} title="Commits">
-        <Text c="dimmed" size="sm">You&apos;ve pushed 23 commits to<Text variant="link" component="span" inherit>fix-notifications branch</Text></Text>
-        <Text size="xs" mt={4}>52 minutes ago</Text>
-      </Timeline.Item>
-
-      <Timeline.Item title="Pull request" bullet={<IconGitPullRequest size={12} />} lineVariant="dashed">
-        <Text c="dimmed" size="sm">You&apos;ve submitted a pull request<Text variant="link" component="span" inherit>Fix incorrect notification message (#187)</Text></Text>
-        <Text size="xs" mt={4}>34 minutes ago</Text>
-      </Timeline.Item>
-
-      <Timeline.Item title="Code review" bullet={<IconMessageDots size={12} />}>
-        <Text c="dimmed" size="sm"><Text variant="link" component="span" inherit>Robert Gluesticker</Text> left a code review on your pull request</Text>
-        <Text size="xs" mt={4}>12 minutes ago</Text>
-      </Timeline.Item>
-    </Timeline>
-
+      {statusData.length > 0 ? (
+        statusData.map((data, index) => (
+          <Group display="flex" mt="xl" key={index}>
+            <Text><strong>Register No.:</strong> {data.registerNo}</Text>
+            <Text><strong>Name:</strong> {data.name}</Text>
+            <Text><strong>Reason:</strong> {data.reason}</Text>
+            <Text><strong>Date:</strong> {new Date(data.date).toLocaleDateString()}</Text>
+            <Text><strong>Department:</strong> {data.department}</Text>
+            <Text><strong>Tutor:</strong> {data.tutor}</Text>
+            <Text><strong>Status:</strong> {data.status}</Text>
+          </Group>
+        ))
+      ) : (
+        <Text mt="xl" color="dimmed">Enter a register number to track the status.</Text>
+      )}
     </>
   );
 }

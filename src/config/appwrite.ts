@@ -1,4 +1,4 @@
-import { Client, Account } from 'appwrite';
+import { Client, Account, Databases } from 'appwrite';
 import env from '@/env';
 
 
@@ -9,4 +9,5 @@ client
     .setProject(env.appwrite.projectId); 
 
 export const account = new Account(client);
+export const databases = new Databases(client); 
 export { ID } from 'appwrite';
