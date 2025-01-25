@@ -15,9 +15,8 @@ export function Authentication() {
   useEffect(() => {
     const checkSession = async () => {
       try {
-        // Check if user is already logged in
         await account.get();
-        router.push('/'); // Redirect to the dashboard if logged in
+        router.push('/'); 
       } catch (err) {
         console.log('User not logged in:', err);
       }
@@ -33,7 +32,7 @@ export function Authentication() {
     try {
       await account.createEmailPasswordSession(email, password);
       alert('Login successful!');
-      router.push('/'); // Navigate to the dashboard
+      router.push('/'); 
     } catch (err: any) {
       setError(err?.message || 'An error occurred while logging in');
     } finally {

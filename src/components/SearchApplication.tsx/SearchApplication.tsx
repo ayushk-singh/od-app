@@ -4,7 +4,7 @@ import { databases } from '@/config/appwrite';
 import { Query } from 'appwrite';
 import env from '@/env';
 
-function TrackApplication() {
+function SearchApplication() {
   const [registerNo, setRegisterNo] = useState('');
   const [statusData, setStatusData] = useState<any[]>([]); // Array of status data for multiple applications
   const [loading, setLoading] = useState(false);
@@ -69,4 +69,4 @@ function TrackApplication() {
   );
 }
 
-export default TrackApplication;
+export default SearchApplication;

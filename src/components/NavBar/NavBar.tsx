@@ -1,26 +1,46 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import NextImage from 'next/image';
 import { useRouter } from 'next/navigation';
-import { IconArrowRight, IconEdit, IconFileSearch, IconPhoto } from '@tabler/icons-react';
+import { IconArrowRight, IconEdit, IconFileSearch, IconSettings } from '@tabler/icons-react';
 import { AppShell, Box, Burger, Button, Group, Image, NavLink } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { account } from '@/config/appwrite';
 import hicasLogo from '../../../public/hicas_logo.jpg';
 import OdForm from '../OdForm/OdForm';
-import TrackApplication from '../TrackApplication/TrackApplication';
+import SearchApplication from '../SearchApplication.tsx/SearchApplication';
+import TutorAction from '../TutorAction/TutorAction'; // New component for faculty
 import classes from '@/components/NavBar/NavBar.module.css';
-
-const data = [
-  { icon: IconEdit, label: 'Create Application' },
-  { icon: IconFileSearch, label: 'Track Application' },
-];
 
 export function NavBar() {
   const [opened, { toggle }] = useDisclosure();
   const [active, setActive] = useState(0);
+  const [userRole, setUserRole] = useState<'student' | 'faculty' | null>(null); // State for user role
   const router = useRouter();
+
+  useEffect(() => {
+    // Fetch the current user's session or profile to determine their labels
+    const fetchUserLabels = async () => {
+      try {
+        const user = await account.get();
+        const labels = user.labels || []; // Default to an empty array if labels don't exist
+        if (labels.includes('student')) {
+          setUserRole('student');
+        } else if (labels.includes('faculty')) {
+          setUserRole('faculty');
+        } else {
+          alert('Invalid role! Please contact support.');
+          router.push('/login'); // Redirect to login if role is not valid
+        }
+      } catch (err: any) {
+        console.log('Error fetching user labels:', err);
+        router.push('/login'); // Redirect to login if session is invalid
+      }
+    };
+
+    fetchUserLabels();
+  }, [router]);
 
   const handleLogout = async () => {
     try {
@@ -32,7 +52,20 @@ export function NavBar() {
     }
   };
 
-  const items = data.map((item, index) => (
+  // Navigation items based on user role
+  const studentNavItems = [
+    { icon: IconEdit, label: 'Create Application', component: <OdForm /> },
+    { icon: IconFileSearch, label: 'Search Application', component: <SearchApplication /> },
+  ];
+
+  const facultyNavItems = [
+    { icon: IconSettings, label: 'Manage Applications', component: <TutorAction /> },
+    { icon: IconFileSearch, label: 'Search Application', component: <SearchApplication /> },
+  ];
+
+  const navItems = userRole === 'student' ? studentNavItems : facultyNavItems;
+
+  const items = navItems.map((item, index) => (
     <NavLink
       key={item.label}
       active={index === active}
@@ -80,7 +113,7 @@ export function NavBar() {
           Log Out
         </Button>
       </AppShell.Navbar>
-      <AppShell.Main>{active === 0 ? <OdForm /> : <TrackApplication />}</AppShell.Main>
+      <AppShell.Main>{navItems[active]?.component}</AppShell.Main>
     </AppShell>
   );
 }

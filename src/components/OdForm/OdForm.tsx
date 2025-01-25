@@ -5,18 +5,22 @@ import { Fieldset, NativeSelect, Textarea, TextInput, Button, Loader } from '@ma
 import { DateInput } from '@mantine/dates';
 import { useForm } from '@mantine/form';
 import { account, databases } from '@/config/appwrite'; 
+import { Query } from 'appwrite';
+import env from '@/env';
 
 function OdForm() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<{ name: string } | null>(null);
+  const [departments, setDepartments] = useState<string[]>([]);
+  const [tutors, setTutors] = useState<string[]>([]);
+  const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
 
-  // Initialize Mantine Form
   const form = useForm({
     initialValues: {
       name: '',
       registerNo: '',
       reason: '',
-      date: new Date(), // Set today's date as the default
+      date: new Date(),
       department: '',
       tutor: '',
     },
@@ -30,50 +34,76 @@ function OdForm() {
     },
   });
 
+  // Fetch initial data
   useEffect(() => {
-    async function fetchUser() {
+    async function fetchData() {
       try {
-        const session = await account.getSession('current'); // Check for active session
+        const session = await account.getSession('current');
         if (session) {
-          const user = await account.get(); // Fetch user details
-          setUser(user); // Set user state
+          const user = await account.get();
+          setUser(user);
           form.setFieldValue('name', user.name);
-          form.setFieldValue('registerNo', user.$id) 
-        } else {
-          console.error('No active session. User needs to log in.');
+          form.setFieldValue('registerNo', user.$id);
         }
+
+        // Fetch departments
+        const deptResponse = await databases.listDocuments(
+          env.appwriteDB.databaseId,
+          env.appwriteDB.collectionIdDepartment
+        );
+        setDepartments(deptResponse.documents.map((doc) => doc.$id));
       } catch (error: any) {
-        console.error('Error fetching session or user:', error.message);
+        console.error('Error fetching data:', error.message);
       } finally {
-        setLoading(false); // Stop loading spinner
+        setLoading(false);
       }
     }
 
-    fetchUser();
+    fetchData();
   }, []);
 
-  // Handle Form Submission
+  // Fetch tutors based on selected department
+  useEffect(() => {
+    async function fetchTutors() {
+      if (!selectedDepartment) return;
+
+      try {
+        const tutorResponse = await databases.listDocuments(
+          env.appwriteDB.databaseId,
+          env.appwriteDB.collectionIdTutor,
+          [Query.equal('department', selectedDepartment)] // Filter by department
+        );
+        setTutors(tutorResponse.documents.map((doc) => doc.name));
+      } catch (error: any) {
+        console.error('Error fetching tutors:', error.message);
+      }
+    }
+
+    fetchTutors();
+  }, [selectedDepartment]);
+
   const handleSubmit = async (values: typeof form.values) => {
     try {
-      // Define database details
-      const databaseId = '6793af7200183db0b780'; // Replace with your Appwrite Database ID
-      const collectionId = '6793bb560032ac48fdd8'; // Replace with your `od` collection ID
+      const databaseId = env.appwriteDB.databaseId;
+      const collectionId = env.appwriteDB.collectionIdOD;
 
-      // Prepare data for submission
       const documentData = {
         name: values.name,
         registerNo: values.registerNo,
         reason: values.reason,
-        date: values.date.toISOString(), // Convert date to ISO string
+        date: values.date.toISOString(),
         department: values.department,
         tutor: values.tutor,
+        status: 'pending'
       };
 
-      // Submit data to Appwrite
       const response = await databases.createDocument(databaseId, collectionId, 'unique()', documentData);
       console.log('Document created successfully:', response);
       alert('Your application has been submitted successfully!');
-      form.reset(); // Reset form after submission
+      form.reset();
+      setSelectedDepartment(null); // Reset selected department
+      setTutors([]); // Clear tutors list
+
     } catch (error: any) {
       console.error('Error submitting application:', error.message);
       alert('Failed to submit your application. Please try again.');
@@ -117,14 +147,19 @@ function OdForm() {
           <NativeSelect
             label="Select Your Department"
             description="Select Your Department"
-            data={['BBA', 'BCA', 'B.Com']}
+            data={departments}
             mt="md"
             {...form.getInputProps('department')}
+            onChange={(e) => {
+              const value = e.currentTarget.value;
+              setSelectedDepartment(value);
+              form.setFieldValue('department', value);
+            }}
           />
           <NativeSelect
             label="Select Your Tutor"
             description="Select Your Tutor"
-            data={['A', 'B', 'C']}
+            data={tutors}
             mt="md"
             {...form.getInputProps('tutor')}
           />
