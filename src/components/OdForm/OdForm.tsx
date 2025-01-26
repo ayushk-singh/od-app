@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useEffect } from 'react';
 import { Fieldset, NativeSelect, Textarea, TextInput, Button, Loader } from '@mantine/core';
 import { DateInput } from '@mantine/dates';
@@ -12,8 +10,9 @@ function OdForm() {
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState<{ name: string } | null>(null);
   const [departments, setDepartments] = useState<string[]>([]);
-  const [tutors, setTutors] = useState<string[]>([]);
+  const [faculty, setFaculty] = useState<{ name: string, email: string }[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
+  const [selectedFacultyEmail, setSelectedFacultyEmail] = useState<string>('');
 
   const form = useForm({
     initialValues: {
@@ -22,15 +21,15 @@ function OdForm() {
       reason: '',
       date: new Date(),
       department: '',
-      tutor: '',
+      faculty: '',
+      facultyEmail: '', // Add facultyEmail in form state
     },
     validate: {
-      name: (value) => (value ? null : 'Name is required'),
-      registerNo: (value) => (value ? null : 'Register No. is required'),
       reason: (value) => (value ? null : 'Reason is required'),
       date: (value) => (value ? null : 'Date is required'),
       department: (value) => (value ? null : 'Department is required'),
-      tutor: (value) => (value ? null : 'Tutor is required'),
+      faculty: (value) => (value ? null : 'Faculty is required'),
+      facultyEmail: (value) => (value ? null : 'Faculty email is required'),
     },
   });
 
@@ -62,25 +61,38 @@ function OdForm() {
     fetchData();
   }, []);
 
-  // Fetch tutors based on selected department
+  // Fetch faculty based on selected department
   useEffect(() => {
-    async function fetchTutors() {
+    async function fetchFaculty() {
       if (!selectedDepartment) return;
 
       try {
-        const tutorResponse = await databases.listDocuments(
+        const facultyResponse = await databases.listDocuments(
           env.appwriteDB.databaseId,
-          env.appwriteDB.collectionIdTutor,
+          env.appwriteDB.collectionIdFaculty,
           [Query.equal('department', selectedDepartment)] // Filter by department
         );
-        setTutors(tutorResponse.documents.map((doc) => doc.name));
+        setFaculty(facultyResponse.documents.map((doc) => ({
+          name: doc.name,
+          email: doc.email, // Assuming faculty document has `email` field
+        })));
       } catch (error: any) {
-        console.error('Error fetching tutors:', error.message);
+        console.error('Error fetching faculty:', error.message);
       }
     }
 
-    fetchTutors();
+    fetchFaculty();
   }, [selectedDepartment]);
+
+  // Update the email based on selected faculty
+  const handleFacultyChange = (value: string) => {
+    const selectedFaculty = faculty.find(f => f.name === value);
+    if (selectedFaculty) {
+      setSelectedFacultyEmail(selectedFaculty.email);
+      form.setFieldValue('facultyEmail', selectedFaculty.email);
+    }
+    form.setFieldValue('faculty', value);
+  };
 
   const handleSubmit = async (values: typeof form.values) => {
     try {
@@ -93,7 +105,8 @@ function OdForm() {
         reason: values.reason,
         date: values.date.toISOString(),
         department: values.department,
-        tutor: values.tutor,
+        faculty: values.faculty,
+        facultyEmail: values.facultyEmail, // Add facultyEmail to the document data
         status: 'pending'
       };
 
@@ -102,7 +115,7 @@ function OdForm() {
       alert('Your application has been submitted successfully!');
       form.reset();
       setSelectedDepartment(null); // Reset selected department
-      setTutors([]); // Clear tutors list
+      setFaculty([]); // Clear faculty list
 
     } catch (error: any) {
       console.error('Error submitting application:', error.message);
@@ -122,13 +135,15 @@ function OdForm() {
           <TextInput
             label="Your name"
             placeholder="Your name"
-            {...form.getInputProps('name')}
+            value={form.values.name}
+            readOnly
           />
           <TextInput
             label="Register No."
             placeholder="Register No."
             mt="md"
-            {...form.getInputProps('registerNo')}
+            value={form.values.registerNo}
+            readOnly
           />
           <Textarea
             label="Reason"
@@ -157,11 +172,19 @@ function OdForm() {
             }}
           />
           <NativeSelect
-            label="Select Your Tutor"
-            description="Select Your Tutor"
-            data={tutors}
+            label="Select Your Faculty"
+            description="Select Your Faculty"
+            data={faculty.map(fac => fac.name)} // Show only faculty names
             mt="md"
-            {...form.getInputProps('tutor')}
+            {...form.getInputProps('faculty')}
+            onChange={(e) => handleFacultyChange(e.currentTarget.value)} // Update faculty email
+          />
+          <TextInput
+            label="Faculty Email"
+            placeholder="Faculty email"
+            mt="md"
+            value={selectedFacultyEmail}
+            readOnly
           />
         </Fieldset>
         <Button type="submit" mt="lg">
