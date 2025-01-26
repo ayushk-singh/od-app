@@ -93,7 +93,6 @@ export default function TutorAction() {
       );
       setNotification(`OD request updated to ${status.replace(/_/g, ' ')}`);
       // Re-fetch data after action
-      fetchData();
     } catch (error: any) {
       console.error('Error updating status:', error.message);
     }
