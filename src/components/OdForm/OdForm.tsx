@@ -12,7 +12,7 @@ function OdForm() {
   const [departments, setDepartments] = useState<string[]>([]);
   const [faculty, setFaculty] = useState<{ name: string, email: string }[]>([]);
   const [selectedDepartment, setSelectedDepartment] = useState<string | null>(null);
-  const [selectedFacultyEmail, setSelectedFacultyEmail] = useState<string>('');
+  const [selectedFacultyEmail, setSelectedFacultyEmail] = useState<string | null>(null);
 
   const form = useForm({
     initialValues: {
@@ -86,7 +86,7 @@ function OdForm() {
 
   // Update the email based on selected faculty
   const handleFacultyChange = (value: string) => {
-    const selectedFaculty = faculty.find(f => f.name === value);
+    const selectedFaculty = faculty.find((f) => f.name === value);
     if (selectedFaculty) {
       setSelectedFacultyEmail(selectedFaculty.email);
       form.setFieldValue('facultyEmail', selectedFaculty.email);
@@ -107,7 +107,7 @@ function OdForm() {
         department: values.department,
         faculty: values.faculty,
         facultyEmail: values.facultyEmail, // Add facultyEmail to the document data
-        status: 'pending'
+        status: 'pending',
       };
 
       const response = await databases.createDocument(databaseId, collectionId, 'unique()', documentData);
@@ -116,7 +116,6 @@ function OdForm() {
       form.reset();
       setSelectedDepartment(null); // Reset selected department
       setFaculty([]); // Clear faculty list
-
     } catch (error: any) {
       console.error('Error submitting application:', error.message);
       alert('Failed to submit your application. Please try again.');
@@ -132,19 +131,8 @@ function OdForm() {
       <h1>Welcome, {user?.name}!</h1>
       <form onSubmit={form.onSubmit(handleSubmit)}>
         <Fieldset legend="Application for OD">
-          <TextInput
-            label="Your name"
-            placeholder="Your name"
-            value={form.values.name}
-            readOnly
-          />
-          <TextInput
-            label="Register No."
-            placeholder="Register No."
-            mt="md"
-            value={form.values.registerNo}
-            readOnly
-          />
+          <TextInput label="Your name" placeholder="Your name" value={form.values.name} readOnly />
+          <TextInput label="Register No." placeholder="Register No." mt="md" value={form.values.registerNo} readOnly />
           <Textarea
             label="Reason"
             description="Why you want OD"
@@ -162,28 +150,28 @@ function OdForm() {
           <NativeSelect
             label="Select Your Department"
             description="Select Your Department"
-            data={departments}
+            data={['Select Department', ...departments]}
+            value={form.values.department || 'Select Department'}
             mt="md"
-            {...form.getInputProps('department')}
             onChange={(e) => {
               const value = e.currentTarget.value;
-              setSelectedDepartment(value);
-              form.setFieldValue('department', value);
+              setSelectedDepartment(value !== 'Select Department' ? value : null);
+              form.setFieldValue('department', value !== 'Select Department' ? value : '');
             }}
           />
           <NativeSelect
             label="Select Your Faculty"
             description="Select Your Faculty"
-            data={faculty.map(fac => fac.name)} // Show only faculty names
+            data={['Select Faculty', ...faculty.map((fac) => fac.name)]}
+            value={form.values.faculty || 'Select Faculty'}
             mt="md"
-            {...form.getInputProps('faculty')}
-            onChange={(e) => handleFacultyChange(e.currentTarget.value)} // Update faculty email
+            onChange={(e) => handleFacultyChange(e.currentTarget.value)}
           />
           <TextInput
             label="Faculty Email"
             placeholder="Faculty email"
             mt="md"
-            value={selectedFacultyEmail}
+            value={selectedFacultyEmail || ''}
             readOnly
           />
         </Fieldset>
