@@ -5,6 +5,7 @@ import { Button, Group, Table, ScrollArea, Text, Notification } from '@mantine/c
 import { databases } from '@/config/appwrite';
 import env from '@/env';
 import { account } from '@/config/appwrite';
+import { Query } from 'appwrite';
 
 interface RowData {
   id: string;
@@ -18,14 +19,20 @@ interface RowData {
   facultyEmail: string;
 }
 
-export default function TutorAction() {
+interface HodData {
+  id: string;
+  name: string;
+  email: string;
+  department: string;
+}
+
+export default function HodAction() {
   const [data, setData] = useState<RowData[]>([]);
-  const [pendingData, setPendingData] = useState<RowData[]>([]);
   const [approvedData, setApprovedData] = useState<RowData[]>([]);
   const [rejectedData, setRejectedData] = useState<RowData[]>([]);
-  const [forwardedData, setForwardedData] = useState<RowData[]>([]);
   const [user, setUser] = useState<{ name: string, email: string } | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
+  const [hodDepartment, setHodDepartment] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchUserData() {
@@ -43,29 +50,53 @@ export default function TutorAction() {
     fetchUserData();
   }, []);
 
+  // Fetch HOD's department based on their email
   useEffect(() => {
-    async function fetchData() {
+    async function fetchHodDepartment() {
       if (!user) return;
 
       try {
-        const response = await databases.listDocuments(
-          env.appwriteDB.databaseId, 
-          env.appwriteDB.collectionIdOD 
+        const hodData = await databases.listDocuments(
+          env.appwriteDB.databaseId,
+          env.appwriteDB.collectionIdHod,
+          [
+            Query.equal('email', user.email)
+          ]
         );
-        
-        // Filter applications based on faculty email and include all relevant statuses
+
+        if (hodData.documents.length > 0) {
+          setHodDepartment(hodData.documents[0].department);
+        } else {
+          console.error('HOD not found or no department assigned');
+        }
+      } catch (error: any) {
+        console.error('Error fetching HOD department:', error.message);
+      }
+    }
+
+    fetchHodDepartment();
+  }, [user]);
+
+  useEffect(() => {
+    async function fetchData() {
+      if (!user || !hodDepartment) return;
+
+      try {
+        const response = await databases.listDocuments(
+          env.appwriteDB.databaseId,
+          env.appwriteDB.collectionIdOD
+        );
+
+        // Filter OD applications based on HOD's department and status
         const odApplications = response.documents
-          .filter((doc: any) => 
-            doc.facultyEmail === user.email && 
-            (doc.status === 'pending' || 
-             doc.status === 'approved_by_tutor' || 
-             doc.status === 'rejected_by_tutor' || 
-             doc.status === 'forwarded_to_hod')
+          .filter((doc: any) =>
+            doc.status === 'forwarded_to_hod' &&
+            doc.department === hodDepartment
           )
           .map((doc: any) => ({
             id: doc.$id,
             name: doc.name,
-            registerNo: doc.registerNo, 
+            registerNo: doc.registerNo,
             reason: doc.reason,
             date: doc.date,
             department: doc.department,
@@ -75,37 +106,29 @@ export default function TutorAction() {
           }));
 
         setData(odApplications);
-
-        // Update all status arrays
-        setPendingData(odApplications.filter((doc) => doc.status === 'pending'));
-        setApprovedData(odApplications.filter((doc) => doc.status === 'approved_by_tutor'));
-        setRejectedData(odApplications.filter((doc) => doc.status === 'rejected_by_tutor'));
-        setForwardedData(odApplications.filter((doc) => doc.status === 'forwarded_to_hod'));
-
+        setApprovedData(odApplications.filter((doc) => doc.status === 'approved_by_hod'));
+        setRejectedData(odApplications.filter((doc) => doc.status === 'rejected_by_hod'));
       } catch (error: any) {
         console.error('Error fetching OD applications:', error.message);
       }
     }
 
     fetchData();
-  }, [user]);
+  }, [user, hodDepartment]);
 
   const handleAction = async (action: string, id: string) => {
     let status: string;
     switch (action) {
       case 'approve':
-        status = 'approved_by_tutor';
+        status = 'approved_by_hod';
         break;
       case 'reject':
-        status = 'rejected_by_tutor';
-        break;
-      case 'forward':
-        status = 'forwarded_to_hod';
+        status = 'rejected_by_hod';
         break;
       default:
         return;
     }
-  
+
     try {
       await databases.updateDocument(
         env.appwriteDB.databaseId,
@@ -113,17 +136,13 @@ export default function TutorAction() {
         id,
         { status }
       );
-  
-      // Find the row being updated
-      const updatedRow = pendingData.find((row) => row.id === id);
-  
+
+      const updatedRow = data.find((row) => row.id === id);
       if (updatedRow) {
         const updatedRowWithStatus = { ...updatedRow, status };
-  
-        // Remove from pending
-        setPendingData((prev) => prev.filter((row) => row.id !== id));
-  
-        // Add to appropriate status array
+
+        setData((prev) => prev.filter((row) => row.id !== id));
+
         switch (action) {
           case 'approve':
             setApprovedData((prev) => [...prev, updatedRowWithStatus]);
@@ -131,16 +150,8 @@ export default function TutorAction() {
           case 'reject':
             setRejectedData((prev) => [...prev, updatedRowWithStatus]);
             break;
-          case 'forward':
-            setForwardedData((prev) => [...prev, updatedRowWithStatus]);
-            break;
         }
-  
-        // Update main data array
-        setData((prev) =>
-          prev.map((row) => (row.id === id ? updatedRowWithStatus : row))
-        );
-  
+
         setNotification(`OD request ${status.replace(/_/g, ' ')} successfully`);
       }
     } catch (error: any) {
@@ -177,7 +188,7 @@ export default function TutorAction() {
               <Table.Td>{row.status.replace(/_/g, ' ')}</Table.Td>
               <Table.Td>
                 <Group>
-                  {row.status === 'pending' && (
+                  {row.status === 'forwarded_to_hod' && (
                     <>
                       <Button
                         color="green"
@@ -190,12 +201,6 @@ export default function TutorAction() {
                         onClick={() => handleAction('reject', row.id)}
                       >
                         Reject
-                      </Button>
-                      <Button
-                        color="blue"
-                        onClick={() => handleAction('forward', row.id)}
-                      >
-                        Forward to HOD
                       </Button>
                     </>
                   )}
@@ -230,17 +235,14 @@ export default function TutorAction() {
         </Notification>
       )}
 
-      <h2>Pending OD Requests</h2>
-      <ScrollArea>{renderTable(pendingData, 'pending')}</ScrollArea>
+      <h2>OD Requests Forwarded to HOD</h2>
+      <ScrollArea>{renderTable(data, 'forwarded_to_hod')}</ScrollArea>
 
       <h2>Approved OD Requests</h2>
-      <ScrollArea>{renderTable(approvedData, 'approved_by_tutor')}</ScrollArea>
+      <ScrollArea>{renderTable(approvedData, 'approved_by_hod')}</ScrollArea>
 
       <h2>Rejected OD Requests</h2>
-      <ScrollArea>{renderTable(rejectedData, 'rejected_by_tutor')}</ScrollArea>
-
-      <h2>Forwarded to HOD OD Requests</h2>
-      <ScrollArea>{renderTable(forwardedData, 'forwarded_to_hod')}</ScrollArea>
+      <ScrollArea>{renderTable(rejectedData, 'rejected_by_hod')}</ScrollArea>
     </>
   );
 }

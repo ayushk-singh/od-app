@@ -3,20 +3,21 @@
 import { useState, useEffect } from 'react';
 import NextImage from 'next/image';
 import { useRouter } from 'next/navigation';
-import { IconArrowRight, IconEdit, IconFileSearch, IconSettings } from '@tabler/icons-react';
+import { IconArrowRight, IconEdit, IconFileSearch, IconSettings, IconUserCheck } from '@tabler/icons-react';
 import { AppShell, Box, Burger, Button, Group, Image, NavLink } from '@mantine/core';
 import { useDisclosure } from '@mantine/hooks';
 import { account } from '@/config/appwrite';
 import hicasLogo from '../../../public/hicas_logo.jpg';
 import OdForm from '../OdForm/OdForm';
 import SearchApplication from '../SearchApplication.tsx/SearchApplication';
-import TutorAction from '../TutorAction/TutorAction'; // New component for faculty
+import TutorAction from '../TutorAction/TutorAction'; // Faculty actions
+import HodAction from '../HodAction/HodAction'; // HOD actions
 import classes from '@/components/NavBar/NavBar.module.css';
 
 export function NavBar() {
   const [opened, { toggle }] = useDisclosure();
   const [active, setActive] = useState(0);
-  const [userRole, setUserRole] = useState<'student' | 'faculty' | null>(null); // State for user role
+  const [userRole, setUserRole] = useState<'student' | 'faculty' | 'hod' | null>(null); // Add 'hod' role
   const router = useRouter();
 
   useEffect(() => {
@@ -29,6 +30,8 @@ export function NavBar() {
           setUserRole('student');
         } else if (labels.includes('faculty')) {
           setUserRole('faculty');
+        } else if (labels.includes('hod')) {
+          setUserRole('hod');
         } else {
           alert('Invalid role! Please contact support.');
           router.push('/login'); // Redirect to login if role is not valid
@@ -63,7 +66,14 @@ export function NavBar() {
     { icon: IconFileSearch, label: 'Search Application', component: <SearchApplication /> },
   ];
 
-  const navItems = userRole === 'student' ? studentNavItems : facultyNavItems;
+  const hodNavItems = [
+    { icon: IconUserCheck, label: 'Approve Applications', component: <HodAction /> },
+    { icon: IconFileSearch, label: 'Search Application', component: <SearchApplication /> },
+  ];
+
+  const navItems = userRole === 'student' ? studentNavItems 
+                  : userRole === 'faculty' ? facultyNavItems 
+                  : hodNavItems;
 
   const items = navItems.map((item, index) => (
     <NavLink
@@ -104,7 +114,6 @@ export function NavBar() {
             src={hicasLogo}
             alt="HICAS logo"
           />
-          <h2>Hindusthan College of Arts & Science</h2>
         </Group>
       </AppShell.Header>
       <AppShell.Navbar withBorder={true} p="md">
